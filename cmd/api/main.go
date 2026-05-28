@@ -42,11 +42,7 @@ func main() {
 	productService := products.NewService(queries)
 	orderService := orders.NewService(queries)
 
-config, err := pgxpool.ParseConfig(cfg.DBConnectionString())
-if err != nil {
-    logger.Log.Fatal("Failed to parse database config", zap.Error(err))
-}
-dbpool, err := pgxpool.NewWithConfig(ctx, config)	authHandler := handlers.NewAuthHandler(userService, cfg)
+	authHandler := handlers.NewAuthHandler(userService, cfg)
 	productHandler := handlers.NewProductHandler(productService)
 	orderHandler := handlers.NewOrderHandler(orderService)
 
