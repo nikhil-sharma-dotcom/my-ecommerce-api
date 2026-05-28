@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -24,6 +23,20 @@ func Load() *Config {
 		log.Println("No .env file found, using system env")
 	}
 
+	// Render provides DATABASE_URL
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		return &Config{
+			Port:      getEnv("PORT", "8080"),
+			JWTSecret: getEnv("JWT_SECRET", "change-this-secret"),
+			// For pgx, we can use DATABASE_URL directly
+			DBHost:     dbURL,
+			DBPort:     "",
+			DBUser:     "",
+			DBPassword: "",
+			DBName:     "",
+		}
+	}
+
 	return &Config{
 		Port:       getEnv("PORT", "8080"),
 		DBHost:     getEnv("DB_HOST", "localhost"),
@@ -36,6 +49,10 @@ func Load() *Config {
 }
 
 func (c *Config) DBConnectionString() string {
+	// If DATABASE_URL is set (Render), use it directly
+	if c.DBHost != "" && c.DBPort == "" {
+		return c.DBHost
+	}
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
 }
@@ -43,15 +60,6 @@ func (c *Config) DBConnectionString() string {
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		}
 	}
 	return defaultValue
 }
