@@ -1,0 +1,62 @@
+.
+├── bin
+├── cmd
+│   ├── api
+│   │   └── main.go
+│   ├── api.go
+│   └── main.go
+├── docker-compose.yaml
+├── Dockerfile
+├── go1.26.0.linux-amd64.tar.gz
+├── go.mod
+├── go.sum
+├── internal
+│   ├── adapters
+│   │   └── postgresql
+│   │       ├── migrations
+│   │       │   ├── 00001_create_products.sql
+│   │       │   ├── 00002_create_orders.sql
+│   │       │   ├── 00003_create_users.sql
+│   │       │   └── 00004_create_order_items.sql
+│   │       └── sqlc
+│   │           ├── db.go
+│   │           ├── models.go
+│   │           ├── querier.go
+│   │           ├── queries.sql
+│   │           └── queries.sql.go
+│   ├── auth
+│   │   └── jwt.go
+│   ├── config
+│   │   └── config.go
+│   ├── env
+│   │   └── env.go
+│   ├── handlers
+│   │   ├── auth_handler.go
+│   │   ├── helpers.go
+│   │   ├── order_handler.go
+│   │   └── product_handler.go
+│   ├── json
+│   │   └── json.go
+│   ├── logger
+│   │   └── logger.go
+│   ├── middleware
+│   │   ├── auth.go
+│   │   ├── cors.go
+│   │   ├── logger.go
+│   │   └── ratelimit.go
+│   ├── orders
+│   │   ├── service.go
+│   │   └── types.go
+│   ├── products
+│   │   └── service.go
+│   ├── types
+│   │   └── types.go
+│   ├── users
+│   └── validator
+│       └── validator.go
+├── Makefile
+├── README.md
+├── sqlc.yaml
+└── structure.txt
+
+21 directories, 39 files

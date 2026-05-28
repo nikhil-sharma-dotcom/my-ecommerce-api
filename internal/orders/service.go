@@ -3,78 +3,78 @@ package orders
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	"github.com/jackc/pgx/v5"
-	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
+	"github.com/nikhil-sharma-dotcom/my-ecommerce-api/internal/adapters/postgresql/sqlc"
 )
 
-var (
-	ErrProductNotFound = errors.New("product not found")
-	ErrProductNoStock  = errors.New("product has not enough stock")
-)
-
-type svc struct {
-	repo *repo.Queries
-	db   *pgx.Conn
+type Service struct {
+	queries *sqlc.Queries
 }
 
-func NewService(repo *repo.Queries, db *pgx.Conn) Service {
-	return &svc{
-		repo: repo,
-		db:   db,
-	}
+func NewService(queries *sqlc.Queries) *Service {
+	return &Service{queries: queries}
 }
 
-func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo.Order, error) {
-	// validate payload
-	if tempOrder.CustomerID == 0 {
-		return repo.Order{}, fmt.Errorf("customer ID is required")
-	}
-	if len(tempOrder.Items) == 0 {
-		return repo.Order{}, fmt.Errorf("at least one item is required")
-	}
+type OrderItemInput struct {
+	ProductID int64
+	Quantity  int32
+}
 
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return repo.Order{}, err
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := s.repo.WithTx(tx)
-
-	// create an order
-	order, err := qtx.CreateOrder(ctx, tempOrder.CustomerID)
-	if err != nil {
-		return repo.Order{}, err
+func (s *Service) Create(ctx context.Context, customerID int64, items []OrderItemInput) (sqlc.Order, error) {
+	if len(items) == 0 {
+		return sqlc.Order{}, errors.New("order must contain at least one item")
 	}
 
-	// look for the product if exists
-	for _, item := range tempOrder.Items {
-		product, err := qtx.FindProductByID(ctx, item.ProductID)
+	var totalCents int64
+	for _, item := range items {
+		product, err := s.queries.GetProduct(ctx, item.ProductID)
 		if err != nil {
-			return repo.Order{}, ErrProductNotFound
+			return sqlc.Order{}, errors.New("product not found")
 		}
-
 		if product.Quantity < item.Quantity {
-			return repo.Order{}, ErrProductNoStock
+			return sqlc.Order{}, errors.New("insufficient stock")
 		}
 
-		// create order item
-		_, err = qtx.CreateOrderItem(ctx, repo.CreateOrderItemParams{
+		err = s.queries.UpdateProductQuantity(ctx, sqlc.UpdateProductQuantityParams{
+			ID:       item.ProductID,
+			Quantity: item.Quantity,
+		})
+		if err != nil {
+			return sqlc.Order{}, err
+		}
+
+		totalCents += int64(product.PriceInCents) * int64(item.Quantity)
+	}
+
+	order, err := s.queries.CreateOrder(ctx, customerID)
+	if err != nil {
+		return sqlc.Order{}, err
+	}
+
+	for _, item := range items {
+		product, _ := s.queries.GetProduct(ctx, item.ProductID)
+		_, err = s.queries.CreateOrderItem(ctx, sqlc.CreateOrderItemParams{
 			OrderID:    order.ID,
 			ProductID:  item.ProductID,
 			Quantity:   item.Quantity,
-			PriceCents: product.PriceInCenters,
+			PriceCents: product.PriceInCents,
 		})
 		if err != nil {
-			return repo.Order{}, err
+			return sqlc.Order{}, err
 		}
-
-		// Challenge: Update the product stock quantity
 	}
 
-	tx.Commit(ctx)
-
 	return order, nil
+}
+
+func (s *Service) GetByID(ctx context.Context, id int64) (sqlc.Order, error) {
+	return s.queries.GetOrder(ctx, id)
+}
+
+func (s *Service) GetByCustomerID(ctx context.Context, customerID int64) ([]sqlc.Order, error) {
+	return s.queries.ListOrdersByCustomer(ctx, customerID)
+}
+
+func (s *Service) GetOrderItems(ctx context.Context, orderID int64) ([]sqlc.OrderItem, error) {
+	return s.queries.GetOrderItems(ctx, orderID)
 }

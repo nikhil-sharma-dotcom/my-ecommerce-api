@@ -3,11 +3,14 @@ sql:
   - engine: "postgresql"
     queries:
       - "./internal/adapters/postgresql/sqlc/queries.sql"
-    schema: "./internal/adapters/postgresql/migrations"
+    schema:
+      - "./internal/adapters/postgresql/migrations/00001_create_products.sql"
+      - "./internal/adapters/postgresql/migrations/00002_create_orders.sql"
+      - "./internal/adapters/postgresql/migrations/00003_create_users.sql"
     gen:
       go:
-        package: "repo"
+        package: "sqlc"
         out: "./internal/adapters/postgresql/sqlc"
         sql_package: "pgx/v5"
         emit_json_tags: true
-        emit_interface: true # generate Querier interface
+        emit_interface: true
